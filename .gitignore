@@ -1,0 +1,14 @@
+# self-test artifacts
+test/fixtures/duckdb_project/data/
+test/fixtures/duckdb_project/output/
+**/*.duckdb
+**/*.duckdb.wal
+
+# drt runtime state (created on each run; never commit)
+**/.drt/state.json
+**/.drt/history/
+
+# python
+__pycache__/
+*.pyc
+.venv/

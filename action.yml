@@ -1,0 +1,131 @@
+name: 'drt sync'
+description: 'Run drt reverse-ETL syncs (drt-core) in CI/CD — pip install drt-core, then drt run, with structured JSON outputs.'
+author: 'drt-hub'
+
+branding:
+  icon: 'refresh-cw'
+  color: 'blue'
+
+inputs:
+  select:
+    description: 'Sync selector: a sync name, a tag (e.g. "tag:crm"), or "*" / "all" for every sync.'
+    required: false
+    default: '*'
+  drt-version:
+    description: 'Version of drt-core to install (e.g. "0.7.8"). Empty installs the latest release.'
+    required: false
+    default: ''
+  python-version:
+    description: 'Python version to set up (drt-core requires >= 3.10).'
+    required: false
+    default: '3.12'
+  extras:
+    description: 'Comma-separated drt-core extras for your connectors (e.g. "postgres,bigquery"). Empty installs base drt-core only.'
+    required: false
+    default: ''
+  working-directory:
+    description: 'Directory containing drt_project.yml and syncs/. Defaults to the repository root.'
+    required: false
+    default: '.'
+  profiles-file:
+    description: 'Path (relative to working-directory) to your profiles.yml; staged to ~/.drt/profiles.yml so drt can find it. Set empty to skip and rely on an existing ~/.drt/profiles.yml.'
+    required: false
+    default: 'profiles.yml'
+  profile:
+    description: 'Profile name to use (overrides DRT_PROFILE and the drt_project.yml profile key). Empty uses the project default.'
+    required: false
+    default: ''
+  dry-run:
+    description: 'Run in preview mode without writing data ("true" / "false").'
+    required: false
+    default: 'false'
+  threads:
+    description: 'Number of parallel sync threads.'
+    required: false
+    default: '1'
+  args:
+    description: 'Extra raw arguments appended to the "drt run" command (escape hatch, word-split on spaces).'
+    required: false
+    default: ''
+
+outputs:
+  status:
+    description: 'Overall result: "success" or "failed".'
+    value: ${{ steps.run.outputs.status }}
+  succeeded:
+    description: 'Number of syncs that succeeded.'
+    value: ${{ steps.run.outputs.succeeded }}
+  failed:
+    description: 'Number of syncs that failed.'
+    value: ${{ steps.run.outputs.failed }}
+  duration-seconds:
+    description: 'Total wall-clock duration of all syncs, in seconds.'
+    value: ${{ steps.run.outputs.duration-seconds }}
+  result-json:
+    description: 'Full JSON result document from "drt run --output json".'
+    value: ${{ steps.run.outputs.result-json }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install drt-core
+      shell: bash
+      env:
+        DRT_EXTRAS: ${{ inputs.extras }}
+        DRT_VERSION: ${{ inputs.drt-version }}
+      run: |
+        set -euo pipefail
+        spec="drt-core"
+        if [ -n "${DRT_EXTRAS}" ]; then spec="drt-core[${DRT_EXTRAS}]"; fi
+        if [ -n "${DRT_VERSION}" ]; then spec="${spec}==${DRT_VERSION}"; fi
+        echo "Installing ${spec}"
+        python -m pip install --upgrade pip
+        python -m pip install "${spec}"
+        drt --version
+
+    - name: Stage drt profile
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        DRT_PROFILES_FILE: ${{ inputs.profiles-file }}
+      run: |
+        set -euo pipefail
+        if [ -n "${DRT_PROFILES_FILE}" ] && [ -f "${DRT_PROFILES_FILE}" ]; then
+          mkdir -p "${HOME}/.drt"
+          cp "${DRT_PROFILES_FILE}" "${HOME}/.drt/profiles.yml"
+          echo "Staged ${DRT_PROFILES_FILE} -> ~/.drt/profiles.yml"
+        else
+          echo "No profiles file at '${DRT_PROFILES_FILE}' (cwd: $(pwd)); relying on an existing ~/.drt/profiles.yml."
+        fi
+
+    - name: Run drt sync
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        DRT_SELECT: ${{ inputs.select }}
+        DRT_THREADS: ${{ inputs.threads }}
+        DRT_DRYRUN: ${{ inputs.dry-run }}
+        DRT_PROFILE_IN: ${{ inputs.profile }}
+        DRT_EXTRA_ARGS: ${{ inputs.args }}
+      run: |
+        set -uo pipefail
+        result="${RUNNER_TEMP:-/tmp}/drt-result.json"
+        cmd=(drt run --select "${DRT_SELECT}" --output json --threads "${DRT_THREADS}")
+        if [ "${DRT_DRYRUN}" = "true" ]; then cmd+=(--dry-run); fi
+        if [ -n "${DRT_PROFILE_IN}" ]; then cmd+=(--profile "${DRT_PROFILE_IN}"); fi
+        if [ -n "${DRT_EXTRA_ARGS}" ]; then
+          read -ra extra <<< "${DRT_EXTRA_ARGS}"
+          cmd+=("${extra[@]}")
+        fi
+        echo "+ ${cmd[*]}"
+        "${cmd[@]}" >"${result}"
+        code=$?
+        cat "${result}"
+        python "${GITHUB_ACTION_PATH}/scripts/emit_outputs.py" "${result}" "${code}"
+        exit "${code}"

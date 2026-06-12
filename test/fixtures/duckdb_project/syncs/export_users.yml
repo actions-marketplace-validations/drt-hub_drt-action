@@ -1,0 +1,11 @@
+name: export_users
+description: Export the seeded users table from DuckDB to a JSONL file.
+model: ref('users')
+destination:
+  type: file
+  path: ./output/users.jsonl
+  format: jsonl
+sync:
+  mode: full
+  batch_size: 1000
+  on_error: skip

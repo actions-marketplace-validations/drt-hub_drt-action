@@ -1,0 +1,5 @@
+# Hermetic self-test profile — no secrets, a local DuckDB file seeded by seed.py.
+# Staged to ~/.drt/profiles.yml by the action's "Stage drt profile" step.
+local:
+  type: duckdb
+  database: ./data/warehouse.duckdb

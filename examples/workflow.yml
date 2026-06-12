@@ -1,0 +1,39 @@
+# Copy this into your repo at .github/workflows/drt-sync.yml and adjust.
+#
+# This mirrors the Action's own hermetic self-test: a local DuckDB source to a
+# file destination, which needs no secrets. For real connectors, set `extras`
+# (e.g. postgres,bigquery) and pass credentials via `env:` from GitHub Secrets.
+name: drt sync
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly — adjust to taste
+  workflow_dispatch:       # manual "Run workflow" button
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: drt-hub/drt-action@v1
+        id: sync
+        with:
+          select: '*'
+          extras: postgres
+          # working-directory: .       # where drt_project.yml + syncs/ live
+          # profiles-file: profiles.yml
+          # threads: 4
+        env:
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+      - if: always()
+        run: |
+          echo "status:    ${{ steps.sync.outputs.status }}"
+          echo "succeeded: ${{ steps.sync.outputs.succeeded }}"
+          echo "failed:    ${{ steps.sync.outputs.failed }}"
+          echo "duration:  ${{ steps.sync.outputs.duration-seconds }}s"

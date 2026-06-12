@@ -1,0 +1,62 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: self-test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seed hermetic DuckDB fixture
+        run: |
+          python -m pip install --quiet duckdb
+          python test/fixtures/duckdb_project/seed.py
+
+      - name: Run drt-action
+        id: drt
+        uses: ./
+        with:
+          working-directory: test/fixtures/duckdb_project
+          extras: duckdb
+          python-version: ${{ matrix.python-version }}
+          select: '*'
+
+      - name: Assert outputs
+        run: |
+          echo "status=${{ steps.drt.outputs.status }}"
+          echo "succeeded=${{ steps.drt.outputs.succeeded }}"
+          echo "failed=${{ steps.drt.outputs.failed }}"
+          echo "duration-seconds=${{ steps.drt.outputs.duration-seconds }}"
+          test "${{ steps.drt.outputs.status }}" = "success"
+          test "${{ steps.drt.outputs.succeeded }}" = "1"
+          test "${{ steps.drt.outputs.failed }}" = "0"
+
+      - name: Assert dry-run does not fail
+        id: drt_dry
+        uses: ./
+        with:
+          working-directory: test/fixtures/duckdb_project
+          extras: duckdb
+          python-version: ${{ matrix.python-version }}
+          select: '*'
+          dry-run: 'true'
+
+  lint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
