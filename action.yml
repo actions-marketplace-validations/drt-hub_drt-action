@@ -12,7 +12,7 @@ inputs:
     required: false
     default: '*'
   drt-version:
-    description: 'Version of drt-core to install (e.g. "0.7.8"). Empty installs the latest release.'
+    description: 'Version of drt-core to install (e.g. "0.8.0"). Empty installs the latest release.'
     required: false
     default: ''
   python-version:
