@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- CI: bumped pinned `actions/checkout` (v4 → v7) and `actions/setup-python`
+  (v5 → v7) majors; added `.github/dependabot.yml` (github-actions ecosystem,
+  weekly) so future majors don't go stale silently again.
+- Docs: refreshed the `drt-version` example in README to `0.9.0`.
+
 ## [1.0.0] - 2026-06-13
 
 ### Added

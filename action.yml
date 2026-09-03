@@ -12,7 +12,7 @@ inputs:
     required: false
     default: '*'
   drt-version:
-    description: 'Version of drt-core to install (e.g. "0.7.8"). Empty installs the latest release.'
+    description: 'Version of drt-core to install (e.g. "0.8.0"). Empty installs the latest release.'
     required: false
     default: ''
   python-version:
@@ -69,7 +69,7 @@ runs:
   using: 'composite'
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ inputs.python-version }}
 

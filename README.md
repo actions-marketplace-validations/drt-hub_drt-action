@@ -57,7 +57,7 @@ The Action stages your `profiles.yml` (see the `profiles-file` input) to `~/.drt
 | Input | Default | Description |
 | --- | --- | --- |
 | `select` | `*` | Sync selector: a sync name, a tag (`tag:crm`), or `*` / `all` for every sync. |
-| `drt-version` | _(latest)_ | Version of `drt-core` to install (e.g. `0.7.8`). Empty installs the latest release. |
+| `drt-version` | _(latest)_ | Version of `drt-core` to install (e.g. `0.9.0`). Empty installs the latest release. |
 | `python-version` | `3.12` | Python version to set up (drt-core requires >= 3.10). |
 | `extras` | _(none)_ | Comma-separated `drt-core` extras for your connectors (e.g. `postgres,bigquery`). |
 | `working-directory` | `.` | Directory containing `drt_project.yml` and `syncs/`. |
